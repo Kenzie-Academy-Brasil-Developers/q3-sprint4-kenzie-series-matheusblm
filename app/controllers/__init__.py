@@ -1,54 +1,26 @@
-import psycopg2
+from flask import jsonify, request
+from http import HTTPStatus
 
-def create_table():
-    conn = psycopg2.connect(host="localhost", database="kenzeis", user="hank", password="1234")
-    cur = conn.cursor()
-    cur.execute(""" CREATE TABLE IF NOT EXISTS ka_series(
-                            id BIGSERIAl PRIMARY KEY,
-                            serie VARCHAR(100) PRIMARY KEY,
-                            seasons integer not null,
-                            genre VARCHAR(50) not null,
-                            imdb_rating FLOAT(2) not null,
-    );""")
-    conn.commit()
-    cur.close()
-    conn.close()
+from app.models.serie_model import Serie
 
-def get_table():
-    create_table()
-    conn = psycopg2.connect(host="localhost", database="kenzeis", user="hank", password="1234")
-    cur = conn.cursor()
-    cur.execute(""" SELECT * FROM ka_series""")
-    registros = cur.fetchall()
-    FIELDNAMES = ["id", "series", "seasons", "genre", "imdb_rating"]
-    processed_data = [dict(zip(FIELDNAMES, row)) for row in registros]
-    conn.commit()
-    cur.close()
-    conn.close()
-    return processed_data
 
-def create_serie(date):
-    create_table()
-    conn = psycopg2.connect(host="localhost", database="kenzeis", user="hank", password="1234")
-    cur = conn.cursor()
-    serie = (date.get("serie"),date.get("seasons"),date.get("genre"),date.get("imdb_rating"), )
-    query = 'INSERT INTO ka_series (serie,seasons,genre, imdb_rating) VALUES (%s,%s,%s,%s)'
-    cur.execute(query, serie)
-    conn.commit()
-    cur.close()
-    conn.close()
-    return date
+def create():
+    data = request.get_json()
+    result_create = Serie.create_serie(data)
+    if result_create == 'erro':
+        return  {"msg": "Serie already registered"}, 409
 
-def filter_serie(id):
-    create_table()
-    conn = psycopg2.connect(host="localhost", database="kenzeis", user="hank", password="1234")
-    cur = conn.cursor()
-    query = 'SELECT * FROM ka_series WHERE id like (%s)'
-    cur.execute(query, id)
-    registros = cur.fetchall()
-    FIELDNAMES = ["id", "series", "seasons", "genre", "imdb_rating"]
-    processed_data = [dict(zip(FIELDNAMES, row)) for row in registros]
-    conn.commit()
-    cur.close()
-    conn.close()
-    return processed_data
+    return jsonify(result_create), 201
+
+def series():
+    result_get_all = Serie.get_all_series()
+
+    return jsonify({"data":result_get_all }), 200
+
+def select_by_id(serie_id):
+    result_search = Serie.filter_serie(serie_id)
+
+    if not result_search:
+        return jsonify({"error": "Not Found"}), 404
+
+    return jsonify({"data":result_search}), 200
